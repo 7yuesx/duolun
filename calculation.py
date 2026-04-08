@@ -325,7 +325,7 @@ class AdvancedSolver:
         self.g = g
         
         # 四个方向的角度
-        self.phi = np.array([3*np.pi/4, -3*np.pi/4, -np.pi/4, np1.pi/4])
+        self.phi = np.array([3*np.pi/4, -3*np.pi/4, -np.pi/4, np.pi/4])
         
         # 不等式右边常数
         self.rhs = mu**2 * m**2 * g**2 * R**2

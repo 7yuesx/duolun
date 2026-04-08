@@ -32,12 +32,12 @@
     -->
     <worldbody>
         <geom type="plane" size="10 10 0.1" material="plane" friction="1.0 0.005 0.0001"/>
-        <body name="gimbal" pos="0 0 0.3">
+        <body name="gimbal" pos="0 0 0.28">
             <joint type="free"/>
-            <geom name="gimbal_geom1" type="box" size="0.14 0.14 0.135" pos="0 0 0" rgba="1.0 0.8 0.0 1"/>
-            <geom name="gimbal_geom2" type="box" size="0.065 0.15 0.065" pos="0 0.145 0" rgba="1.0 0.647 0.0 1"/>
+            <geom name="gimbal_geom1" type="box" size="0.12 0.12 0.115" pos="0 0 0" rgba="1.0 0.8 0.0 1"/>
+            <geom name="gimbal_geom2" type="box" size="0.085 0.085 0.025" pos="0 0.17 0" rgba="1.0 0.647 0.0 1"/>
             <site name="imu" type="box" size=".01 .01 .01"/>
-            <body name="chassis" pos="0 0 -0.135">
+            <body name="chassis" pos="0 0 -0.115">
                 <!-- 正方形底盘几何体：边长0.5，厚度0.1 -->
                 <joint name="joint_Yaw" type="hinge" axis="0 0 1" damping="0.01"/>
                 <geom name="chassis_geom" type="box" size="0.28 0.28 0.025" pos="0 0 0.015" rgba="1.0 0.8 0.0 1"/>

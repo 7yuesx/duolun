@@ -111,13 +111,13 @@ for body_id in range(num_bodies):
     inertia = m.body_inertia[body_id]
     print(f"ID: {body_id}, 名称: {body_name}, 质量: {mass}, 父ID: {parent_id}, 惯性: {inertia}")
 
-M = 15.680000000000003+26.238000000000003
-J = 0.81954133 + 0.2811737 + 4*0.00149103
+M = 15.680000000000003+14.693
+J = 0.81954133 + 0.12577308 + 4*0.00149103
 R = 0.39597975  # 轴距
 r = 0.075 # 轮半径
 
-ar = 6.7936
-at = 20.0 
+ar = 2.0
+at = 8.0 
 
 phi = [3*math.pi/4, -3*math.pi/4, -math.pi/4, math.pi/4]
 
@@ -151,7 +151,11 @@ Vy_f = 0.0
 Wz_f = 0.0
 
 target = [0, 0, 0]
-Angle_IK_reed=[0,0,0,0]
+dt=0.3
+Angle_Target = 0.0
+Angle_Now = 0.0
+Vmax = 1.0
+
 def pi_to_pi(angle_current, angle_ref):
     error0 = angle_ref - angle_current
     error = 0.0
@@ -165,19 +169,19 @@ def pi_to_pi(angle_current, angle_ref):
 
 
 
-def forward_kinematics(steer_directions, wheel_speeds, vx, vy, w):
-    vx = r*(wheel_speeds[0]*math.cos(steer_directions[0]) + wheel_speeds[1]*math.cos(steer_directions[1]) + \
+def forward_kinematics(steer_directions, wheel_speeds):
+    vx = r*(wheel_speeds[0]*math.cos(steer_directions[0]) + wheel_speeds[1]*math.cos(steer_directions[1]) + 
             wheel_speeds[2]*math.cos(steer_directions[2]) + wheel_speeds[3]*math.cos(steer_directions[3]))/4
-    vy = r*(wheel_speeds[0]*math.sin(steer_directions[0]) + wheel_speeds[1]*math.sin(steer_directions[1]) + \
+    vy = r*(wheel_speeds[0]*math.sin(steer_directions[0]) + wheel_speeds[1]*math.sin(steer_directions[1]) + 
             wheel_speeds[2]*math.sin(steer_directions[2]) + wheel_speeds[3]*math.sin(steer_directions[3]))/4
-    w  = r*(wheel_speeds[0]*math.sin(steer_directions[0]) - wheel_speeds[1]*math.cos(steer_directions[1]) - \
-            wheel_speeds[2]*math.sin(steer_directions[2]) + wheel_speeds[3]*math.cos(steer_directions[3]))/4/R
+    w  = r*(wheel_speeds[0]*math.sin(steer_directions[0]-phi[0]) + wheel_speeds[1]*math.sin(steer_directions[1]-phi[1]) + 
+            wheel_speeds[2]*math.sin(steer_directions[2]-phi[2]) + wheel_speeds[3]*math.sin(steer_directions[3]-phi[3]))/4/R
     
     return vx, vy, w
 
 def Wheel_Calculation(wheel_control, steer_direction, ax, ay, aw, phi):
 
-    wheel_control =	r*(M*ax*R*math.cos(steer_direction) + \
+    wheel_control =	r*(M*ax*R*math.cos(steer_direction) + 
                        M*ay*R*math.sin(steer_direction)+J*aw*math.sin(steer_direction - phi))/R/4 
     return wheel_control
 
@@ -185,34 +189,34 @@ def Wheel_Pid(wheel_speed, steer_direction, vx, vy, w, phi, PID_control):
     wheel_speed_target = (vx*math.cos(steer_direction)+vy*math.sin(steer_direction)+w*R*math.sin(steer_direction - phi))/r
     return PID_control.pid_Calculation(wheel_speed, wheel_speed_target)
 
-def Steer_Calculation(steer_speed, steer_direction, steer_control, phi, PID_control_angle, PID_control_speed):
+def Steer_Calculation(steer_speed, steer_direction, steer_control, phi,PID_control_angle, PID_control_speed):
 
     if abs(ax) <= 0.001 and abs(ay) <= 0.001 and abs(aw) <= 0.001 :
         steer_control = 0
         Angle_IK_=0.0
-    elif (abs(vx-R*w*math.sin(phi)) <= 0.1 and abs(vy+R*w*math.cos(phi)) <= 0.1) :
+    elif (abs(Vx_f-R*Wz_f*math.sin(phi)) <= 0.1 and abs(Vy_f+R*Wz_f*math.cos(phi)) <= 0.1) :
         if  Vx==0 and Vy==0 and Wz==0:#abs(ax) <= 1.0  and abs(ay) <= 1.0 and abs(aw) <= 1.0*math.pi and
             steer_control = 0
             Angle_IK_=0.0
         else :
-            Angle_IK = math.atan2(ay+R*(aw*math.cos(phi)-w**2*math.sin(phi)),ax-R*(aw*math.sin(phi)+w**2*math.cos(phi)))
+            Angle_IK = math.atan2(ay+R*(aw*math.cos(phi)-Wz_f**2*math.sin(phi)),ax-R*(aw*math.sin(phi)+Wz_f**2*math.cos(phi)))
             Angle_IK=Angle_IK+pi_to_pi(steer_direction,Angle_IK)
             #DL_Motor->control.Wrpm_IK = PID_Calculate( &DL_Motor->PID_P, DL_Motor->control.Angle, DL_Motor->control.Angle_IK);
             steer_control = PID_control_speed.pid_Calculation(steer_speed,PID_control_angle.pid_Calculation(steer_direction, Angle_IK) )
             Angle_IK_=0.0
     else :
-        Angle_IK = math.atan2((vy + R*w*math.cos(phi)) , (vx - R*w*math.sin(phi)))
-        denominator = ((vx - R * w * math.sin(phi))**2 + 
-                      (vy + R * w * math.cos(phi))**2)
+        Angle_IK = math.atan2(((Vy_f+ay) + R*(Wz_f+aw)*math.cos(phi)) , ((Vx_f+ax) - R*(Wz_f+aw)*math.sin(phi)))
+        denominator = ((Vx_f - R * Wz_f * math.sin(phi))**2 + 
+                      (Vy_f + R * Wz_f * math.cos(phi))**2)
         
-        numerator = (vx * ay - vy * ax - 
-                    w * (vx**2 + vy**2) +
-                    R * math.cos(phi) * (aw * vx - w * (ax + w * vy)) +
-                    R * math.sin(phi) * (aw * vy - w * (ay + w * vx)))
+        numerator = (Vx_f * ay - Vy_f * ax - 
+                    Wz_f * (Vx_f**2 + Vy_f**2) +
+                    R * math.cos(phi) * (aw * Vx_f - Wz_f * (ax + Wz_f * vy)) +
+                    R * math.sin(phi) * (aw * Vy_f - Wz_f * (ay + Wz_f * Vx_f)))
         
         Angle_IK_ = numerator / denominator
        
-
+    
         Angle_IK_ = Angle_IK_filter.filter(Angle_IK_)            
         Angle_IK=Angle_IK+pi_to_pi(steer_direction,Angle_IK)    
         # if abs(Angle_IK) < 90.0:
@@ -224,15 +228,16 @@ def Steer_Calculation(steer_speed, steer_direction, steer_control, phi, PID_cont
         #         Angle_IK += 180.0    
         #DL_Motor->control.Wrpm_IK = DL_Motor->control.Angle_+PID_Calculate( &DL_Motor->PID_P, DL_Motor->control.Angle, DL_Motor->control.Angle_IK);	
         steer_control = PID_control_speed.pid_Calculation(steer_speed, Angle_IK_+PID_control_angle.pid_Calculation( steer_direction, Angle_IK) )
-    return steer_control, Angle_IK_
+    return steer_control
 	
 
+    
 
-Wz_pid=PID_control(50,0,0.001,0,)
+Wz_pid=PID_control(5.0 ,0.0,0.1,0,)
 
-ax_pid=PID_control(5000,0.0,0.0,0,)
-ay_pid=PID_control(5000,0.0,0.0,0,)
-aw_pid=PID_control(5000,0.0,0.0,0,)
+ax_pid=PID_control(2,0.0,0.0,0,)
+ay_pid=PID_control(2,0.0,0.0,0,)
+aw_pid=PID_control(2*math.pi,0.0,0.0,0,)
 
 ax_filter=LowPassFilter(1.0)
 ay_filter=LowPassFilter(1.0)
@@ -262,10 +267,10 @@ wheel2_pid_pos=PID_control(0.001,0,0,0)
 wheel3_pid_pos=PID_control(0.001,0,0,0)
 wheel4_pid_pos=PID_control(0.001,0,0,0)
 
-wheel1_pid_vel=PID_control(0.0001,0,0,0)
-wheel2_pid_vel=PID_control(0.0001,0,0,0)
-wheel3_pid_vel=PID_control(0.0001,0,0,0)
-wheel4_pid_vel=PID_control(0.0001,0,0,0)
+wheel1_pid_vel=PID_control(0.000,0,0,0)
+wheel2_pid_vel=PID_control(0.000,0,0,0)
+wheel3_pid_vel=PID_control(0.000,0,0,0)
+wheel4_pid_vel=PID_control(0.000,0,0,0)
 
 with mujoco.viewer.launch_passive(m, d) as viewer:
     
@@ -323,7 +328,6 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         vy = -cmd_vx * math.sin(err_angle) + cmd_vy * math.cos(err_angle)
         # if vy == -0.0:
         #     vy = 0.0
-         
 
         if mode :
             w = cmd_omega_w
@@ -332,9 +336,9 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
             target[1]=0
             target[1]=target[1]+pi_to_pi(err_angle,target[1]) 
             w = Wz_pid.pid_Calculation(err_angle,target[1])
-
+        
         # 正运动学解算
-        [Vx_f, Vy_f, Wz_f]=forward_kinematics(steer_angles, steer_speeds, Vx_f, Vy_f, Wz_f)
+        Vx_f, Vy_f, Wz_f=forward_kinematics(steer_angles, wheel_speeds)
         # back_kinematics(Vx_f, Vy_f, Wz_f, steer_directions_b, wheel_speeds_b)
 
         Vx_f=Vx_f_filter.filter(Vx_f)
@@ -366,25 +370,34 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         wheel_controls[3]=Wheel_Calculation(wheel_controls[3],steer_angles[3],ax,ay,aw,phi[3])+\
         Wheel_Pid(wheel_speeds[3], steer_angles[3], Vx_f, Vy_f, Wz_f, phi[3], wheel4_pid_vel)
 
-        steer_controls[0], Angle_IK_reed[0] = Steer_Calculation(steer_speeds[0], steer_angles[0], steer_controls[0], phi[0], steer1_pid_pos, steer1_pid_vel)
-        steer_controls[1], Angle_IK_reed[1] = Steer_Calculation(steer_speeds[1], steer_angles[1], steer_controls[1], phi[1], steer2_pid_pos, steer2_pid_vel)
-        steer_controls[2], Angle_IK_reed[2] = Steer_Calculation(steer_speeds[2], steer_angles[2], steer_controls[2], phi[2], steer3_pid_pos, steer3_pid_vel)
-        steer_controls[3], Angle_IK_reed[3] = Steer_Calculation(steer_speeds[3], steer_angles[3], steer_controls[3], phi[3], steer4_pid_pos, steer4_pid_vel)
+        steer_controls[0] = Steer_Calculation(steer_speeds[0], steer_angles[0], steer_controls[0], phi[0], steer1_pid_pos, steer1_pid_vel)
+        steer_controls[1] = Steer_Calculation(steer_speeds[1], steer_angles[1], steer_controls[1], phi[1], steer2_pid_pos, steer2_pid_vel)
+        steer_controls[2] = Steer_Calculation(steer_speeds[2], steer_angles[2], steer_controls[2], phi[2], steer3_pid_pos, steer3_pid_vel)
+        steer_controls[3] = Steer_Calculation(steer_speeds[3], steer_angles[3], steer_controls[3], phi[3], steer4_pid_pos, steer4_pid_vel)
 
-        for i in range(4) :
-            wheel_controls[i]*=0.01
-            steer_controls[i]*=0.01
+        # for i in range(4) :
+        #     wheel_controls[i]*=0.01
+        #     steer_controls[i]*=0.01
 
         # 确保 send_list 中所有元素都是 float
         send_list = [
-            float(steer_controls[0]), 
-            float(steer_controls[1]), 
-            float(steer_controls[2]), 
-            float(steer_controls[3]), 
-            float(Angle_IK_reed[0]),
-            float(Angle_IK_reed[1]),
-            float(Angle_IK_reed[2]),
-            float(Angle_IK_reed[3])
+            float(Vx_f), 
+            float(Vy_f), 
+            float(Wz_f), 
+            float(vx), 
+            float(vy),
+            float(w),
+            float(ax),
+            float(ay),
+            float(aw),
+            float(steer_angles[0]),
+            float(steer_angles[1]),
+            float(steer_angles[2]),
+            float(steer_angles[3]),
+            float(wheel_speeds[0]),
+            float(wheel_speeds[1]),
+            float(wheel_speeds[2]),
+            float(wheel_speeds[3]),
         ]
 
 # 打包数据  
@@ -402,7 +415,6 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         for i in range(4):
             d.ctrl[i] = steer_controls[i]  # 前4个是舵轮位置控制
             d.ctrl[4 + i] = wheel_controls[i]  # 后4个是轮子速度控制
-            
             
         mujoco.mj_step(m, d)
         viewer.sync()
