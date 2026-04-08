@@ -116,8 +116,8 @@ J = 0.81954133 + 0.12577308 + 4*0.00149103
 R = 0.39597975  # 轴距
 r = 0.075 # 轮半径
 
-ar = 2.0
-at = 8.0 
+ar = 8.0
+at = 16.0 
 
 phi = [3*math.pi/4, -3*math.pi/4, -math.pi/4, math.pi/4]
 
@@ -235,9 +235,9 @@ def Steer_Calculation(steer_speed, steer_direction, steer_control, phi,PID_contr
 
 Wz_pid=PID_control(5.0 ,0.0,0.1,0,)
 
-ax_pid=PID_control(2,0.0,0.0,0,)
-ay_pid=PID_control(2,0.0,0.0,0,)
-aw_pid=PID_control(2*math.pi,0.0,0.0,0,)
+ax_pid=PID_control(4,0.0,0.0,0,)
+ay_pid=PID_control(4,0.0,0.0,0,)
+aw_pid=PID_control(8*math.pi,0.0,0.0,0,)
 
 ax_filter=LowPassFilter(1.0)
 ay_filter=LowPassFilter(1.0)

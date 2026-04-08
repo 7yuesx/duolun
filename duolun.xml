@@ -18,6 +18,7 @@
         <!-- <hfield name="agent_eval_gym" file="agent_eval_gym.png" size="10 10 1 1" /> -->
         <!-- <texture type="skybox" file="../asset/desert.png"
             gridsize="3 4" gridlayout=".U..LFRB.D.." /> -->
+        <hfield name="sine_terrain" size="2 2 0.04 0.1" nrow="256" ncol="256" file="speed_bump_terrain.png"/>
         <texture name="plane" type="2d" builtin="checker" rgb1=".1 .1 .1" rgb2=".9 .9 .9" 
             width="512" height="512" mark="cross" markrgb=".8 .8 .8" />
         <material name="plane" reflectance="0.3" texture="plane" texrepeat="1 1" texuniform="true"/>
@@ -31,7 +32,9 @@
     </worldbody>
     -->
     <worldbody>
-        <geom type="plane" size="10 10 0.1" material="plane" friction="1.0 0.005 0.0001"/>
+        
+        <geom type="plane" size="2 2 0.1" material="plane" friction="1.0 0.005 0.0001"/>
+        <geom type="hfield" name="terrain" pos="4 0 0.0" hfield="sine_terrain" size="10 10 0.1" friction="1.0 0.005 0.0001"/>
         <body name="gimbal" pos="0 0 0.28">
             <joint type="free"/>
             <geom name="gimbal_geom1" type="box" size="0.12 0.12 0.115" pos="0 0 0" rgba="1.0 0.8 0.0 1"/>
