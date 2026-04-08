@@ -267,10 +267,10 @@ wheel2_pid_pos=PID_control(0.001,0,0,0)
 wheel3_pid_pos=PID_control(0.001,0,0,0)
 wheel4_pid_pos=PID_control(0.001,0,0,0)
 
-wheel1_pid_vel=PID_control(0.000,0,0,0)
-wheel2_pid_vel=PID_control(0.000,0,0,0)
-wheel3_pid_vel=PID_control(0.000,0,0,0)
-wheel4_pid_vel=PID_control(0.000,0,0,0)
+wheel1_pid_vel=PID_control(0.001,0,0,0)
+wheel2_pid_vel=PID_control(0.001,0,0,0)
+wheel3_pid_vel=PID_control(0.001,0,0,0)
+wheel4_pid_vel=PID_control(0.001,0,0,0)
 
 with mujoco.viewer.launch_passive(m, d) as viewer:
     
