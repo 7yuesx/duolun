@@ -151,10 +151,9 @@ Vy_f = 0.0
 Wz_f = 0.0
 
 target = [0, 0, 0]
-dt=0.3
-Angle_Target = 0.0
-Angle_Now = 0.0
-Vmax = 1.0
+
+v_x = 0.0
+v_y = 0.0
 
 def pi_to_pi(angle_current, angle_ref):
     error0 = angle_ref - angle_current
@@ -205,13 +204,13 @@ def Steer_Calculation(steer_speed, steer_direction, steer_control, phi,PID_contr
             steer_control = PID_control_speed.pid_Calculation(steer_speed,PID_control_angle.pid_Calculation(steer_direction, Angle_IK) )
             Angle_IK_=0.0
     else :
-        Angle_IK = math.atan2(((Vy_f+ay) + R*(Wz_f+aw)*math.cos(phi)) , ((Vx_f+ax) - R*(Wz_f+aw)*math.sin(phi)))
+        Angle_IK = math.atan2(((vy) + R*(w)*math.cos(phi)) , ((vx) - R*(w)*math.sin(phi)))
         denominator = ((Vx_f - R * Wz_f * math.sin(phi))**2 + 
                       (Vy_f + R * Wz_f * math.cos(phi))**2)
         
         numerator = (Vx_f * ay - Vy_f * ax - 
                     Wz_f * (Vx_f**2 + Vy_f**2) +
-                    R * math.cos(phi) * (aw * Vx_f - Wz_f * (ax + Wz_f * vy)) +
+                    R * math.cos(phi) * (aw * Vx_f - Wz_f * (ax + Wz_f * Vy_f)) +
                     R * math.sin(phi) * (aw * Vy_f - Wz_f * (ay + Wz_f * Vx_f)))
         
         Angle_IK_ = numerator / denominator
@@ -230,8 +229,35 @@ def Steer_Calculation(steer_speed, steer_direction, steer_control, phi,PID_contr
         steer_control = PID_control_speed.pid_Calculation(steer_speed, Angle_IK_+PID_control_angle.pid_Calculation( steer_direction, Angle_IK) )
     return steer_control
 	
+def Planner(v,v_,dt):
+    a_=0.0
 
-    
+    if v>=0 and v<v_:
+        a_=-math.sqrt(ar**2/2)*dt
+    elif v<=0 and v>v_:
+        a_=math.sqrt(ar**2/2)*dt    
+    elif v==0 and v_<0.0 :
+        a_=math.sqrt(ar**2/2)*dt 
+    elif v==0 and v_>0 :
+        a_=-math.sqrt(ar**2/2)*dt
+    elif v>0 and v>v_:
+        a_=0.0
+        v_=v    
+    elif v<0 and v<v_:
+        a_=0.0
+        v_=v 
+
+    v_+=a_
+
+    if v>0 and v_>v:
+        v_=v
+    elif v<0 and v_<v:
+        v_=v
+    elif v==0 and abs(v_)<0.1 :   
+        v_=v
+    return v_ 
+
+
 
 Wz_pid=PID_control(5.0 ,0.0,0.1,0,)
 
@@ -323,9 +349,12 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         yaw_chassis = imu_chassis.get_euler(quat_chassis)
         # print(yaw_chassis)
         
+        v_x=Planner(cmd_vx,v_x,0.001)
+        v_y=Planner(cmd_vy,v_y,0.001)
+
         err_angle = (yaw_gimbal - yaw_chassis)
-        vx = cmd_vx * math.cos(err_angle) + cmd_vy * math.sin(err_angle)
-        vy = -cmd_vx * math.sin(err_angle) + cmd_vy * math.cos(err_angle)
+        vx = v_x * math.cos(err_angle) + v_y * math.sin(err_angle)
+        vy = -v_x * math.sin(err_angle) + v_y * math.cos(err_angle)
         # if vy == -0.0:
         #     vy = 0.0
 
@@ -345,6 +374,9 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         Vy_f=Vy_f_filter.filter(Vy_f)
         Wz_f=Wz_f_filter.filter(Wz_f)
 
+        # Angle_Now=math.atan2(vy, vx)
+        # Err_Angle = (Angle_Now - Angle_Last)
+  
         ax = ax_pid.pid_Calculation(Vx_f,vx)
         ay = ay_pid.pid_Calculation(Vy_f,vy)
         aw = aw_pid.pid_Calculation(Wz_f,w)
@@ -386,6 +418,8 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
             float(Wz_f), 
             float(vx), 
             float(vy),
+            float(v_x), 
+            float(v_y),
             float(w),
             float(ax),
             float(ay),
@@ -415,7 +449,10 @@ with mujoco.viewer.launch_passive(m, d) as viewer:
         for i in range(4):
             d.ctrl[i] = steer_controls[i]  # 前4个是舵轮位置控制
             d.ctrl[4 + i] = wheel_controls[i]  # 后4个是轮子速度控制
-            
+
+        
+        # Angle_Last=0.3*Angle_Now+0.7*Angle_Last
+
         mujoco.mj_step(m, d)
         viewer.sync()
         # 控制仿真步长
